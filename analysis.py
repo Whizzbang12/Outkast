@@ -105,7 +105,8 @@ def build_metrics(sku_list, z_inv, s_inv, z_sales, s_sales):
     # ---- velocity: use 4W if recent sales exist, else fall back to 13W ----
     df["daily_vel_4w"]  = df["units_4w"]  / DAYS_4W
     df["daily_vel_13w"] = df["units_13w"] / DAYS_13W
-    df["daily_vel"] = df["daily_vel_13w"]
+    df["daily_vel_52w"] = df["units_52w"] / DAYS_52W
+    df["daily_vel"] = df["daily_vel_52w"]  # changed to 52W velocity
 
     # ---- days / months cover ----
     df["days_cover"] = df.apply(

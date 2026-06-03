@@ -300,7 +300,7 @@ def build_summary(wb, df, reorder, overstock, run_date):
     # ── Formula legend ──────────────────────────────────────────────────
     ws.merge_cells("A26:L26")
     leg = ws.cell(row=26, column=1,
-        value="Formulas:  DailyVel = IF(4W>0, 4W÷28, 13W÷91)   "
+        value="Formulas:  DailyVel = 52W ÷ 364   "
               "ReorderFlag = SuggestedQty>0   "
               "OverstockFlag = MonthsCover>12   "
               "MonthsCover = DaysCover÷28   "
