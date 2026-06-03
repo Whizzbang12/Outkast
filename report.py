@@ -312,7 +312,7 @@ def build_summary(wb, df, reorder, overstock, run_date):
     ws.row_dimensions[26].height = 16
 
 
-def build_report(df, trend, run_date, out_path):
+def build_report(df, trend, daily, run_date, out_path):
     wb  = Workbook()
     INT, MONEY, DEC, VEL = "#,##0", "$#,##0.00", "0.0", "0.000"
 
@@ -433,155 +433,155 @@ def build_report(df, trend, run_date, out_path):
            trend_df, wt_cols, fmts=wt_fmts, run_date=run_date)
 
     # ── TAB 7: Daily Sales ────────────────────────────────────────────
-    # _build_daily_sales_sheet(wb, daily, run_date)
+    _build_daily_sales_sheet(wb, daily, run_date)
 
     wb.save(out_path)
     print(f"Report   : {out_path}")
 
-# def _build_daily_sales_sheet(wb, daily_data, run_date):
-#     """
-#     Daily Sales — simple transaction list, last 30 days.
-#     Date | SKU | Product | Quantity | Subtotal | Discount Amount |
-#     Subtotal with Discount | Tax Amount | Cost
-#     One row per SKU per day that had sales. Newest first.
-#     """
-#     if daily_data is None:
-#         return
+def _build_daily_sales_sheet(wb, daily_data, run_date):
+    """
+    Daily Sales — simple transaction list, last 30 days.
+    Date | SKU | Product | Quantity | Subtotal | Discount Amount |
+    Subtotal with Discount | Tax Amount | Cost
+    One row per SKU per day that had sales. Newest first.
+    """
+    if daily_data is None:
+        return
 
-#     df, summary, date_labels, date_strs, metric_map = daily_data
-#     INT   = "#,##0"
-#     MONEY = "$#,##0.00"
+    df, summary, date_labels, date_strs, metric_map = daily_data
+    INT   = "#,##0"
+    MONEY = "$#,##0.00"
 
-#     ws = wb.create_sheet("Daily Sales")
-#     ws.sheet_view.showGridLines     = False
-#     ws.sheet_view.showRowColHeaders = False
+    ws = wb.create_sheet("Daily Sales")
+    ws.sheet_view.showGridLines     = False
+    ws.sheet_view.showRowColHeaders = False
 
-#     # ── Build flat transaction rows ──────────────────────────────────────
-#     rows = []
-#     for dl, ds in zip(date_labels, date_strs):
-#         for _, rec in df.iterrows():
-#             qty = rec.get(f"{dl}|qty", 0) or 0
-#             if qty <= 0:
-#                 continue
-#             rows.append({
-#                 "sort_date":       ds,  # The raw mathematical date (e.g., 2026-05-31)
-#                 "date":            dl,
-#                 "sku":             rec["sku"],
-#                 "name":            rec.get("name", ""),
-#                 "qty":             int(qty),
-#                 "qty_zoey":        int(rec.get(f"{dl}|qty_zoey",    0) or 0),
-#                 "qty_shopify":     int(rec.get(f"{dl}|qty_shopify", 0) or 0),
-#                 "subtotal":        round(rec.get(f"{dl}|subtotal",  0) or 0, 2),
-#                 "discount":        round(rec.get(f"{dl}|discount",  0) or 0, 2),
-#                 "subtotal_w_disc": round(rec.get(f"{dl}|net_rev",   0) or 0, 2),
-#                 "tax":             round(rec.get(f"{dl}|tax",       0) or 0, 2),
-#                 "cost":            round(rec.get(f"{dl}|cost",      0) or 0, 2),
-#                 "is_discontinued": bool(rec.get("is_discontinued", False)),
-#             })
+    # ── Build flat transaction rows ──────────────────────────────────────
+    rows = []
+    for dl, ds in zip(date_labels, date_strs):
+        for _, rec in df.iterrows():
+            qty = rec.get(f"{dl}|qty", 0) or 0
+            if qty <= 0:
+                continue
+            rows.append({
+                "sort_date":       ds,  # The raw mathematical date (e.g., 2026-05-31)
+                "date":            dl,
+                "sku":             rec["sku"],
+                "name":            rec.get("name", ""),
+                "qty":             int(qty),
+                "qty_zoey":        int(rec.get(f"{dl}|qty_zoey",    0) or 0),
+                "qty_shopify":     int(rec.get(f"{dl}|qty_shopify", 0) or 0),
+                "subtotal":        round(rec.get(f"{dl}|subtotal",  0) or 0, 2),
+                "discount":        round(rec.get(f"{dl}|discount",  0) or 0, 2),
+                "subtotal_w_disc": round(rec.get(f"{dl}|net_rev",   0) or 0, 2),
+                "tax":             round(rec.get(f"{dl}|tax",       0) or 0, 2),
+                "cost":            round(rec.get(f"{dl}|cost",      0) or 0, 2),
+                "is_discontinued": bool(rec.get("is_discontinued", False)),
+            })
 
-#     txn = (pd.DataFrame(rows) if rows
-#            else pd.DataFrame(columns=["date","sku","name","qty","qty_zoey",
-#                                       "qty_shopify","subtotal","discount",
-#                                       "subtotal_w_disc","tax","cost",
-#                                       "is_discontinued"]))
-#     txn = txn.sort_values(["sort_date","sku"], ascending=[False,True]).reset_index(drop=True)
+    txn = (pd.DataFrame(rows) if rows
+           else pd.DataFrame(columns=["date","sku","name","qty","qty_zoey",
+                                      "qty_shopify","subtotal","discount",
+                                      "subtotal_w_disc","tax","cost",
+                                      "is_discontinued"]))
+    txn = txn.sort_values(["sort_date","sku"], ascending=[False,True]).reset_index(drop=True)
 
-#     cols = [
-#         ("date",            "Date"),
-#         ("sku",             "SKU"),
-#         ("name",            "Product"),
-#         ("qty",             "Quantity"),
-#         ("qty_zoey",        "Qty Zoey"),
-#         ("qty_shopify",     "Qty Shopify"),
-#         ("subtotal",        "Subtotal"),
-#         ("discount",        "Discount Amount"),
-#         ("subtotal_w_disc", "Subtotal with Discount"),
-#         ("tax",             "Tax Amount"),
-#         ("cost",            "Cost"),
-#     ]
-#     fmts = {"qty": INT, "qty_zoey": INT, "qty_shopify": INT,
-#             "subtotal": MONEY, "discount": MONEY,
-#             "subtotal_w_disc": MONEY, "tax": MONEY, "cost": MONEY}
-#     widths = {"date": 12, "sku": 16, "name": 30, "qty": 11,
-#               "qty_zoey": 11, "qty_shopify": 12,
-#               "subtotal": 14, "discount": 17, "subtotal_w_disc": 22,
-#               "tax": 13, "cost": 13}
+    cols = [
+        ("date",            "Date"),
+        ("sku",             "SKU"),
+        ("name",            "Product"),
+        ("qty",             "Quantity"),
+        ("qty_zoey",        "Qty Zoey"),
+        ("qty_shopify",     "Qty Shopify"),
+        ("subtotal",        "Subtotal"),
+        ("discount",        "Discount Amount"),
+        ("subtotal_w_disc", "Subtotal with Discount"),
+        ("tax",             "Tax Amount"),
+        ("cost",            "Cost"),
+    ]
+    fmts = {"qty": INT, "qty_zoey": INT, "qty_shopify": INT,
+            "subtotal": MONEY, "discount": MONEY,
+            "subtotal_w_disc": MONEY, "tax": MONEY, "cost": MONEY}
+    widths = {"date": 12, "sku": 16, "name": 30, "qty": 11,
+              "qty_zoey": 11, "qty_shopify": 12,
+              "subtotal": 14, "discount": 17, "subtotal_w_disc": 22,
+              "tax": 13, "cost": 13}
 
-#     ncols = len(cols)
-#     _sheet_header(ws, "Daily Sales",
-#                   f"Daily transactions since Jan 1, 2026  ·  "
-#                   "Combined B2B + D2C  ·  One row per product per day  ·  Newest first",
-#                   run_date, ncols)
+    ncols = len(cols)
+    _sheet_header(ws, "Daily Sales",
+                  f"Daily transactions since Jan 1, 2026  ·  "
+                  "Combined B2B + D2C  ·  One row per product per day  ·  Newest first",
+                  run_date, ncols)
 
-#     # ── Totals row ───────────────────────────────────────────────────────
-#     HDR = 5
-#     ws.row_dimensions[HDR].height = 22
-#     totals = {
-#         "date":            "ALL DAYS",
-#         "sku":             f"{len(txn):,} transactions",
-#         "name":            "",
-#         "qty":             int(txn["qty"].sum())             if not txn.empty else 0,
-#         "qty_zoey":        int(txn["qty_zoey"].sum())        if not txn.empty else 0,
-#         "qty_shopify":     int(txn["qty_shopify"].sum())     if not txn.empty else 0,
-#         "subtotal":        round(txn["subtotal"].sum(), 2)   if not txn.empty else 0,
-#         "discount":        round(txn["discount"].sum(), 2)   if not txn.empty else 0,
-#         "subtotal_w_disc": round(txn["subtotal_w_disc"].sum(),2) if not txn.empty else 0,
-#         "tax":             round(txn["tax"].sum(), 2)         if not txn.empty else 0,
-#         "cost":            round(txn["cost"].sum(), 2)        if not txn.empty else 0,
-#     }
-#     for i, (key, _) in enumerate(cols, 1):
-#         val = totals.get(key, "")
-#         c   = ws.cell(row=HDR, column=i, value=val)
-#         c.font      = Font("Calibri", bold=True, size=9, color=WHITE)
-#         c.fill      = PatternFill("solid", start_color=NAVY2)
-#         c.border    = MED_BOT
-#         c.alignment = Alignment(
-#             horizontal="right" if key in fmts else "left",
-#             vertical="center", indent=1)
-#         if key in fmts and val not in ("", 0):
-#             c.number_format = fmts[key]
+    # ── Totals row ───────────────────────────────────────────────────────
+    HDR = 5
+    ws.row_dimensions[HDR].height = 22
+    totals = {
+        "date":            "ALL DAYS",
+        "sku":             f"{len(txn):,} transactions",
+        "name":            "",
+        "qty":             int(txn["qty"].sum())             if not txn.empty else 0,
+        "qty_zoey":        int(txn["qty_zoey"].sum())        if not txn.empty else 0,
+        "qty_shopify":     int(txn["qty_shopify"].sum())     if not txn.empty else 0,
+        "subtotal":        round(txn["subtotal"].sum(), 2)   if not txn.empty else 0,
+        "discount":        round(txn["discount"].sum(), 2)   if not txn.empty else 0,
+        "subtotal_w_disc": round(txn["subtotal_w_disc"].sum(),2) if not txn.empty else 0,
+        "tax":             round(txn["tax"].sum(), 2)         if not txn.empty else 0,
+        "cost":            round(txn["cost"].sum(), 2)        if not txn.empty else 0,
+    }
+    for i, (key, _) in enumerate(cols, 1):
+        val = totals.get(key, "")
+        c   = ws.cell(row=HDR, column=i, value=val)
+        c.font      = Font("Calibri", bold=True, size=9, color=WHITE)
+        c.fill      = PatternFill("solid", start_color=NAVY2)
+        c.border    = MED_BOT
+        c.alignment = Alignment(
+            horizontal="right" if key in fmts else "left",
+            vertical="center", indent=1)
+        if key in fmts and val not in ("", 0):
+            c.number_format = fmts[key]
 
-#     # ── Column headers ───────────────────────────────────────────────────
-#     HDR2 = HDR + 1
-#     ws.row_dimensions[HDR2].height = 22
-#     ws.freeze_panes = ws.cell(row=HDR2 + 1, column=1)
-#     for i, (key, label) in enumerate(cols, 1):
-#         ws.column_dimensions[get_column_letter(i)].width = widths[key]
-#         c = ws.cell(row=HDR2, column=i, value=label)
-#         c.font      = Font("Calibri", bold=True, color=WHITE, size=10)
-#         c.fill      = PatternFill("solid", start_color=NAVY)
-#         c.alignment = Alignment(horizontal="center", vertical="center")
-#         c.border    = MED_BOT
+    # ── Column headers ───────────────────────────────────────────────────
+    HDR2 = HDR + 1
+    ws.row_dimensions[HDR2].height = 22
+    ws.freeze_panes = ws.cell(row=HDR2 + 1, column=1)
+    for i, (key, label) in enumerate(cols, 1):
+        ws.column_dimensions[get_column_letter(i)].width = widths[key]
+        c = ws.cell(row=HDR2, column=i, value=label)
+        c.font      = Font("Calibri", bold=True, color=WHITE, size=10)
+        c.fill      = PatternFill("solid", start_color=NAVY)
+        c.alignment = Alignment(horizontal="center", vertical="center")
+        c.border    = MED_BOT
 
-#     # ── Data rows ────────────────────────────────────────────────────────
-#     row = HDR2 + 1
-#     for _, rec in txn.iterrows():
-#         is_disc  = bool(rec.get("is_discontinued", False))
-#         zebra    = "F0F3F4" if (row - HDR2) % 2 == 0 else None
-#         ws.row_dimensions[row].height = 16
+    # ── Data rows ────────────────────────────────────────────────────────
+    row = HDR2 + 1
+    for _, rec in txn.iterrows():
+        is_disc  = bool(rec.get("is_discontinued", False))
+        zebra    = "F0F3F4" if (row - HDR2) % 2 == 0 else None
+        ws.row_dimensions[row].height = 16
 
-#         for i, (key, _) in enumerate(cols, 1):
-#             val = rec.get(key, "")
-#             if isinstance(val, float) and pd.isna(val): val = ""
+        for i, (key, _) in enumerate(cols, 1):
+            val = rec.get(key, "")
+            if isinstance(val, float) and pd.isna(val): val = ""
 
-#             c = ws.cell(row=row, column=i, value=val)
-#             c.font      = Font("Calibri", size=9,
-#                                color="95A5A6" if is_disc else BLACK,
-#                                italic=is_disc)
-#             c.border    = THIN_B
-#             c.alignment = Alignment(
-#                 horizontal="right" if key in fmts else "left",
-#                 vertical="center", indent=1)
-#             bg = "EAECEE" if is_disc else zebra
-#             if bg: c.fill = PatternFill("solid", start_color=bg)
-#             if key in fmts and val not in ("", None, 0):
-#                 c.number_format = fmts[key]
-#         row += 1
+            c = ws.cell(row=row, column=i, value=val)
+            c.font      = Font("Calibri", size=9,
+                               color="95A5A6" if is_disc else BLACK,
+                               italic=is_disc)
+            c.border    = THIN_B
+            c.alignment = Alignment(
+                horizontal="right" if key in fmts else "left",
+                vertical="center", indent=1)
+            bg = "EAECEE" if is_disc else zebra
+            if bg: c.fill = PatternFill("solid", start_color=bg)
+            if key in fmts and val not in ("", None, 0):
+                c.number_format = fmts[key]
+        row += 1
 
-#     if txn.empty:
-#         c = ws.cell(row=HDR2 + 1, column=1,
-#                     value="No sales data in the last 30 days.")
-#         c.font = Font("Calibri", size=9, italic=True, color="95A5A6")
+    if txn.empty:
+        c = ws.cell(row=HDR2 + 1, column=1,
+                    value="No sales data in the last 30 days.")
+        c.font = Font("Calibri", size=9, italic=True, color="95A5A6")
 
 # ======================================================================
 # 5b.  EMAIL NOTIFICATION  -  reorder alerts for priority SKUs only

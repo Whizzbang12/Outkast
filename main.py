@@ -5,7 +5,7 @@ import pandas as pd
 from config import REPORT_DIR
 from zoey_api import fetch_zoey
 from shopify_api import fetch_shopify
-from analysis import build_sku_list, build_metrics, build_weekly_trend
+from analysis import build_sku_list, build_metrics, build_weekly_trend, build_daily_sales
 from report import build_report, send_reorder_email
 
 def main():
@@ -39,11 +39,11 @@ def main():
     sku_list = build_sku_list(z_products, s_products)
     df       = build_metrics(sku_list, z_inv, s_inv, z_sales, s_sales)
     trend    = build_weekly_trend(sku_list, z_sales, s_sales)
-    # daily    = build_daily_sales(sku_list, z_sales, s_sales)
+    daily    = build_daily_sales(sku_list, z_sales, s_sales)
 
     out = os.path.join(REPORT_DIR,
                        f"Inventory_Report_{run_date:%Y-%m-%d}.xlsx")
-    build_report(df, trend, run_date, out)
+    build_report(df, trend, daily, run_date, out)
     df.to_csv(out.replace(".xlsx", ".csv"), index=False)
 
     # --- email reorder alert (priority SKUs only) ---

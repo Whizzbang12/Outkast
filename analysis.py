@@ -6,7 +6,7 @@ from config import (
     SAFETY_DAYS, MONTHS_DIVISOR, OVERSTOCK_MONTHS,
     BLEND_MSRP, BLEND_WHOLESALE,
     WEEKLY_TREND_WEEKS,
-    SALES_START_DATE,
+    SALES_START_DATE, DAILY_DAYS
 )
 
 FIN_COLS = ["qty", "subtotal", "discount", "net_rev", "tax", "cost", "gross_profit"]
@@ -261,119 +261,119 @@ def build_weekly_trend(sku_list, z_sales, s_sales):
 
     return trend, week_labels
 
-# def build_daily_sales(sku_list, z_sales, s_sales):
-#     """
-#     Returns (df, summary) where df has:
-#       - SKU, Product
-#       - Per day: Units, Subtotal, Discount, Net Revenue, Cost, GP
-#       - 7D / 30D totals for each metric
-#       - Trend arrow (units, last 7 vs prior 7)
-#     summary = dict of per-day totals across all products.
-#     """
-#     today       = pd.Timestamp.today().normalize()
-#     dates       = [today - pd.Timedelta(days=i) for i in range(DAILY_DAYS-1, -1, -1)]
-#     date_labels = [d.strftime("%b %d, %Y") for d in dates]
-#     date_strs   = [d.strftime("%Y-%m-%d") for d in dates]
-#     base        = sku_list[["sku", "name"]].copy()
+def build_daily_sales(sku_list, z_sales, s_sales):
+    """
+    Returns (df, summary) where df has:
+      - SKU, Product
+      - Per day: Units, Subtotal, Discount, Net Revenue, Cost, GP
+      - 7D / 30D totals for each metric
+      - Trend arrow (units, last 7 vs prior 7)
+    summary = dict of per-day totals across all products.
+    """
+    today       = pd.Timestamp.today().normalize()
+    dates       = [today - pd.Timedelta(days=i) for i in range(DAILY_DAYS-1, -1, -1)]
+    date_labels = [d.strftime("%b %d, %Y") for d in dates]
+    date_strs   = [d.strftime("%Y-%m-%d") for d in dates]
+    base        = sku_list[["sku", "name"]].copy()
 
-#     # tag each sale with its platform so we can split qty by source
-#     z = _ensure_fin_cols(z_sales.copy()) if not z_sales.empty else \
-#         pd.DataFrame(columns=["order_date","sku","qty","net_rev"])
-#     s = _ensure_fin_cols(s_sales.copy()) if not s_sales.empty else \
-#         pd.DataFrame(columns=["order_date","sku","qty","net_rev"])
-#     z["qty_zoey"]    = z["qty"]
-#     z["qty_shopify"] = 0.0
-#     s["qty_zoey"]    = 0.0
-#     s["qty_shopify"] = s["qty"]
+    # tag each sale with its platform so we can split qty by source
+    z = _ensure_fin_cols(z_sales.copy()) if not z_sales.empty else \
+        pd.DataFrame(columns=["order_date","sku","qty","net_rev"])
+    s = _ensure_fin_cols(s_sales.copy()) if not s_sales.empty else \
+        pd.DataFrame(columns=["order_date","sku","qty","net_rev"])
+    z["qty_zoey"]    = z["qty"]
+    z["qty_shopify"] = 0.0
+    s["qty_zoey"]    = 0.0
+    s["qty_shopify"] = s["qty"]
 
-#     all_sales = pd.concat([z, s], ignore_index=True)
-#     all_sales = _ensure_fin_cols(all_sales)
-#     all_sales["order_date"] = pd.to_datetime(all_sales["order_date"], errors="coerce")
-#     all_sales = (all_sales
-#                  .dropna(subset=["order_date", "sku"])
-#                  .copy())
-#     all_sales["date_str"] = all_sales["order_date"].dt.strftime("%Y-%m-%d")
-#     cutoff = pd.Timestamp(SALES_START_DATE)
-#     recent = all_sales[all_sales["order_date"] >= cutoff]
+    all_sales = pd.concat([z, s], ignore_index=True)
+    all_sales = _ensure_fin_cols(all_sales)
+    all_sales["order_date"] = pd.to_datetime(all_sales["order_date"], errors="coerce")
+    all_sales = (all_sales
+                 .dropna(subset=["order_date", "sku"])
+                 .copy())
+    all_sales["date_str"] = all_sales["order_date"].dt.strftime("%Y-%m-%d")
+    cutoff = pd.Timestamp(SALES_START_DATE)
+    recent = all_sales[all_sales["order_date"] >= cutoff]
 
-#     # build one pivot per metric, then combine
-#     metric_map = {
-#         "qty":          "Units",
-#         "qty_zoey":     "Qty Zoey",
-#         "qty_shopify":  "Qty Shopify",
-#         "subtotal":     "Subtotal",
-#         "discount":     "Discount",
-#         "net_rev":      "Net Rev",
-#         "tax":          "Tax",
-#         "cost":         "COGS",
-#         "gross_profit": "GP",
-#     }
+    # build one pivot per metric, then combine
+    metric_map = {
+        "qty":          "Units",
+        "qty_zoey":     "Qty Zoey",
+        "qty_shopify":  "Qty Shopify",
+        "subtotal":     "Subtotal",
+        "discount":     "Discount",
+        "net_rev":      "Net Rev",
+        "tax":          "Tax",
+        "cost":         "COGS",
+        "gross_profit": "GP",
+    }
 
-#     # ── Build all day×metric columns at once (avoids fragmentation) ────
-#     daily_summaries = {ds: {m: 0.0 for m in metric_map} for ds in date_strs}
-#     new_cols = {}   # col_name -> list of values aligned to base["sku"]
+    # ── Build all day×metric columns at once (avoids fragmentation) ────
+    daily_summaries = {ds: {m: 0.0 for m in metric_map} for ds in date_strs}
+    new_cols = {}   # col_name -> list of values aligned to base["sku"]
 
-#     for metric, label in metric_map.items():
-#         if recent.empty or metric not in recent.columns:
-#             pivot_data = {}
-#         else:
-#             piv = (recent.pivot_table(index="sku", columns="date_str",
-#                                       values=metric, aggfunc="sum")
-#                          .reset_index())
-#             piv.columns.name = None
-#             pivot_data = {row["sku"]: row for _, row in piv.iterrows()}
+    for metric, label in metric_map.items():
+        if recent.empty or metric not in recent.columns:
+            pivot_data = {}
+        else:
+            piv = (recent.pivot_table(index="sku", columns="date_str",
+                                      values=metric, aggfunc="sum")
+                         .reset_index())
+            piv.columns.name = None
+            pivot_data = {row["sku"]: row for _, row in piv.iterrows()}
 
-#         for ds, dl in zip(date_strs, date_labels):
-#             col  = f"{dl}|{metric}"
-#             vals = []
-#             for sku in base["sku"]:
-#                 row = pivot_data.get(sku)
-#                 v   = float(row[ds]) if (row is not None and ds in row
-#                                          and pd.notna(row[ds])) else 0.0
-#                 vals.append(round(v, 2))
-#             new_cols[col] = vals
-#             daily_summaries[ds][metric] = round(
-#                 recent[recent["date_str"] == ds][metric].sum()
-#                 if not recent.empty and metric in recent.columns else 0, 2)
+        for ds, dl in zip(date_strs, date_labels):
+            col  = f"{dl}|{metric}"
+            vals = []
+            for sku in base["sku"]:
+                row = pivot_data.get(sku)
+                v   = float(row[ds]) if (row is not None and ds in row
+                                         and pd.notna(row[ds])) else 0.0
+                vals.append(round(v, 2))
+            new_cols[col] = vals
+            daily_summaries[ds][metric] = round(
+                recent[recent["date_str"] == ds][metric].sum()
+                if not recent.empty and metric in recent.columns else 0, 2)
 
-#     # concat all new columns in one shot — no fragmentation
-#     df = pd.concat([base, pd.DataFrame(new_cols, index=base.index)], axis=1)
+    # concat all new columns in one shot — no fragmentation
+    df = pd.concat([base, pd.DataFrame(new_cols, index=base.index)], axis=1)
 
-#     # ── 7D / 30D totals per metric ──────────────────────────────────────
-#     last7_strs  = date_strs[-7:]
-#     prior7_strs = date_strs[-14:-7]
-#     total_cols  = {}
-#     for metric, label in metric_map.items():
-#         last7_cols = [f"{dl}|{metric}" for dl, ds in zip(date_labels, date_strs)
-#                       if ds in last7_strs]
-#         all30_cols = [f"{dl}|{metric}" for dl in date_labels]
-#         total_cols[f"7D {label}"]  = df[last7_cols].sum(axis=1).round(2).values
-#         total_cols[f"30D {label}"] = df[all30_cols].sum(axis=1).round(2).values
+    # ── 7D / 30D totals per metric ──────────────────────────────────────
+    last7_strs  = date_strs[-7:]
+    prior7_strs = date_strs[-14:-7]
+    total_cols  = {}
+    for metric, label in metric_map.items():
+        last7_cols = [f"{dl}|{metric}" for dl, ds in zip(date_labels, date_strs)
+                      if ds in last7_strs]
+        all30_cols = [f"{dl}|{metric}" for dl in date_labels]
+        total_cols[f"7D {label}"]  = df[last7_cols].sum(axis=1).round(2).values
+        total_cols[f"30D {label}"] = df[all30_cols].sum(axis=1).round(2).values
 
-#     df = pd.concat([df, pd.DataFrame(total_cols, index=df.index)], axis=1)
+    df = pd.concat([df, pd.DataFrame(total_cols, index=df.index)], axis=1)
 
-#     # ── Trend (units: last 7 vs prior 7) ───────────────────────────────
-#     prior7_unit_cols = [f"{dl}|qty" for dl, ds in zip(date_labels, date_strs)
-#                         if ds in prior7_strs]
-#     last7_unit_cols  = [f"{dl}|qty" for dl, ds in zip(date_labels, date_strs)
-#                         if ds in last7_strs]
-#     def trend_arrow(r):
-#         l7 = r[last7_unit_cols].sum()
-#         p7 = r[prior7_unit_cols].sum()
-#         if p7 == 0 and l7 == 0: return "—"
-#         if p7 == 0:              return "↑ New"
-#         pct = (l7 - p7) / p7 * 100
-#         if pct >  10: return f"↑ {pct:+.0f}%"
-#         if pct < -10: return f"↓ {pct:+.0f}%"
-#         return f"→ {pct:+.0f}%"
-#     df["Trend"] = df.apply(trend_arrow, axis=1)
+    # ── Trend (units: last 7 vs prior 7) ───────────────────────────────
+    prior7_unit_cols = [f"{dl}|qty" for dl, ds in zip(date_labels, date_strs)
+                        if ds in prior7_strs]
+    last7_unit_cols  = [f"{dl}|qty" for dl, ds in zip(date_labels, date_strs)
+                        if ds in last7_strs]
+    def trend_arrow(r):
+        l7 = r[last7_unit_cols].sum()
+        p7 = r[prior7_unit_cols].sum()
+        if p7 == 0 and l7 == 0: return "—"
+        if p7 == 0:              return "↑ New"
+        pct = (l7 - p7) / p7 * 100
+        if pct >  10: return f"↑ {pct:+.0f}%"
+        if pct < -10: return f"↓ {pct:+.0f}%"
+        return f"→ {pct:+.0f}%"
+    df["Trend"] = df.apply(trend_arrow, axis=1)
 
-#     # sort by 30D Net Rev desc
-#     df = df.sort_values("30D Net Rev", ascending=False).reset_index(drop=True)
+    # sort by 30D Net Rev desc
+    df = df.sort_values("30D Net Rev", ascending=False).reset_index(drop=True)
 
-#     # ── Summary row ─────────────────────────────────────────────────────
-#     summary = {}
-#     for ds, dl in zip(date_strs, date_labels):
-#         summary[dl] = daily_summaries[ds]   # dict of metric→value
+    # ── Summary row ─────────────────────────────────────────────────────
+    summary = {}
+    for ds, dl in zip(date_strs, date_labels):
+        summary[dl] = daily_summaries[ds]   # dict of metric→value
 
-#     return df, summary, date_labels, date_strs, metric_map
+    return df, summary, date_labels, date_strs, metric_map

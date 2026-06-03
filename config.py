@@ -45,7 +45,7 @@ ZOEY_VALID   = {"complete", "processing", "pending_payment"}
 SHOPIFY_PAID = {"paid", "partially_paid", "partially_refunded"}
 
 SALES_START_DATE = "2023-01-01"   # pull all orders from this date onward
-# DAILY_DAYS = (dt.date.today() - dt.date(2023, 1, 1)).days + 1  # Jan 1 2023 to today
+DAILY_DAYS = (dt.date.today() - dt.date(2023, 1, 1)).days + 1  # Jan 1 2023 to today
 
 EMAIL_SKUS = {
     "OBSJ12BB","OBSJ12BG","OBSJ12GP","OBSJ12GPC","OBSJ12PBJ",
