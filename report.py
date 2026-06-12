@@ -183,6 +183,7 @@ def build_summary(wb, df, reorder, overstock, run_date):
 
     INT   = "#,##0"
     MONEY = "$#,##0"
+    PCT   = "0.00%"
 
     n_active  = int((~df["is_discontinued"]).sum())
     n_disc    = int(df["is_discontinued"].sum())
@@ -194,6 +195,9 @@ def build_summary(wb, df, reorder, overstock, run_date):
     inv_val   = round(df["inventory_value"].sum(), 0)
     exc_val   = round(df["excess_inv_value"].sum(), 0)
     gp_val    = round(df["gp_per_sku"].sum(), 0)
+    exp_rev    = inv_val + gp_val
+    exp_margin = (gp_val / exp_rev) if exp_rev > 0 else 0
+    exp_markup = (gp_val / inv_val) if inv_val > 0 else 0
     units_4w  = int(df["units_4w"].sum())
     units_13w = int(df["units_13w"].sum())
     units_52w = int(df["units_52w"].sum())
@@ -278,28 +282,31 @@ def build_summary(wb, df, reorder, overstock, run_date):
     _kpi_card(ws, 14, 1, "Total Inventory Value",     inv_val, MONEY, GREEN, label_width=5)
     _kpi_card(ws, 14, 7, "Total GP on Current Stock", gp_val,  MONEY, GREEN, label_width=5)
     _kpi_card(ws, 15, 1, "Excess Inventory Value",    exc_val, MONEY, AMBER, label_width=5)
-    ws.row_dimensions[16].height = 10
+    _kpi_card(ws, 15, 7, "Total Expected Revenue (Inventory Value + Gross Profit)", exp_rev, MONEY, GREEN, label_width=5)
+    _kpi_card(ws, 16, 1, "Margin [(Gross Profit ÷ Expected Revenue)×100]", exp_margin, PCT, NAVY2, label_width=5)
+    _kpi_card(ws, 16, 7, "Markup [(Gross Profit ÷ Inventory Value)×100]", exp_markup, PCT, NAVY2, label_width=5)
+    ws.row_dimensions[17].height = 10
 
     # ── REVENUE ─────────────────────────────────────────────────────────
-    _section(17, "💵   REVENUE  (net revenue from orders)")
-    _kpi_card(ws, 18, 1, "Total Revenue — Last 7 Days",      rev_total_7d,   MONEY, GREEN, label_width=5)
-    _kpi_card(ws, 18, 7, "Total Revenue — Last 30 Days",     rev_total_30d,  MONEY, GREEN, label_width=5)
-    _kpi_card(ws, 19, 1, "   Zoey (B2B) — Last 7 Days",     rev_zoey_7d,    MONEY, NAVY2, label_width=5)
-    _kpi_card(ws, 19, 7, "   Zoey (B2B) — Last 30 Days",    rev_zoey_30d,   MONEY, NAVY2, label_width=5)
-    _kpi_card(ws, 20, 1, "   Shopify (D2C) — Last 7 Days",  rev_shopify_7d, MONEY, NAVY2, label_width=5)
-    _kpi_card(ws, 20, 7, "   Shopify (D2C) — Last 30 Days", rev_shopify_30d,MONEY, NAVY2, label_width=5)
-    ws.row_dimensions[21].height = 10
+    _section(18, "💵   REVENUE  (net revenue from orders)")
+    _kpi_card(ws, 19, 1, "Total Revenue — Last 7 Days",      rev_total_7d,   MONEY, GREEN, label_width=5)
+    _kpi_card(ws, 19, 7, "Total Revenue — Last 30 Days",     rev_total_30d,  MONEY, GREEN, label_width=5)
+    _kpi_card(ws, 20, 1, "   Zoey (B2B) — Last 7 Days",     rev_zoey_7d,    MONEY, NAVY2, label_width=5)
+    _kpi_card(ws, 20, 7, "   Zoey (B2B) — Last 30 Days",    rev_zoey_30d,   MONEY, NAVY2, label_width=5)
+    _kpi_card(ws, 21, 1, "   Shopify (D2C) — Last 7 Days",  rev_shopify_7d, MONEY, NAVY2, label_width=5)
+    _kpi_card(ws, 21, 7, "   Shopify (D2C) — Last 30 Days", rev_shopify_30d,MONEY, NAVY2, label_width=5)
+    ws.row_dimensions[22].height = 10
 
     # ── SALES VELOCITY ──────────────────────────────────────────────────
-    _section(22, "📈   SALES VELOCITY  (combined B2B + D2C)")
-    _kpi_card(ws, 23, 1, "Units Sold — Last 4 Weeks",  units_4w,  INT, NAVY2, label_width=5)
-    _kpi_card(ws, 23, 7, "Units Sold — Last 13 Weeks", units_13w, INT, NAVY2, label_width=5)
-    _kpi_card(ws, 24, 1, "Units Sold — Last 52 Weeks", units_52w, INT, NAVY2, label_width=5)
-    ws.row_dimensions[25].height = 10
+    _section(23, "📈   SALES VELOCITY  (combined B2B + D2C)")
+    _kpi_card(ws, 24, 1, "Units Sold — Last 4 Weeks",  units_4w,  INT, NAVY2, label_width=5)
+    _kpi_card(ws, 24, 7, "Units Sold — Last 13 Weeks", units_13w, INT, NAVY2, label_width=5)
+    _kpi_card(ws, 25, 1, "Units Sold — Last 52 Weeks", units_52w, INT, NAVY2, label_width=5)
+    ws.row_dimensions[26].height = 10
 
     # ── Formula legend ──────────────────────────────────────────────────
-    ws.merge_cells("A26:L26")
-    leg = ws.cell(row=26, column=1,
+    ws.merge_cells("A27:L27")
+    leg = ws.cell(row=27, column=1,
         value="Formulas:  DailyVel = 52W ÷ 364   "
               "ReorderFlag = SuggestedQty>0   "
               "OverstockFlag = MonthsCover>12   "
@@ -309,7 +316,7 @@ def build_summary(wb, df, reorder, overstock, run_date):
     leg.font      = Font("Calibri", size=8, italic=True, color="7F8C8D")
     leg.fill      = PatternFill("solid", start_color="EBF5FB")
     leg.alignment = Alignment(horizontal="left", vertical="center", indent=2)
-    ws.row_dimensions[26].height = 16
+    ws.row_dimensions[27].height = 16
 
 
 def build_report(df, trend, daily, run_date, out_path):
@@ -587,7 +594,7 @@ def _build_daily_sales_sheet(wb, daily_data, run_date):
 # 5b.  EMAIL NOTIFICATION  -  reorder alerts for priority SKUs only
 # ======================================================================
 
-def send_reorder_email(df, run_date):
+def send_reorder_email(df, run_date, report_path=None):
     """
     Sends a reorder-alert email to the owner.
     ONLY includes SKUs that are:
@@ -667,9 +674,7 @@ def send_reorder_email(df, run_date):
     msg.add_alternative(html, subtype="html")
 
     # attach the Excel report if it exists
-    report_path = os.path.join(
-        REPORT_DIR, f"Inventory_Report_{run_date:%Y-%m-%d}.xlsx")
-    if os.path.exists(report_path):
+    if report_path and os.path.exists(report_path):
         with open(report_path, "rb") as f:
             msg.add_attachment(
                 f.read(),

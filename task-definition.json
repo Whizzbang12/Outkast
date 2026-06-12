@@ -1,0 +1,43 @@
+{
+  "family": "outkast-task",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": ["FARGATE"],
+  "cpu": "512",
+  "memory": "1024",
+  "executionRoleArn": "arn:aws:iam::207763041802:role/outkast-fargate-role",
+  "taskRoleArn": "arn:aws:iam::207763041802:role/outkast-fargate-role",
+  "containerDefinitions": [
+    {
+      "name": "outkast-container",
+      "image": "207763041802.dkr.ecr.us-east-1.amazonaws.com/outkast-tackle:latest",
+      "essential": true,
+      "environment": [
+        {"name": "REPORT_DIR", "value": "/tmp/reports"},
+        {"name": "SEND_EMAIL", "value": "true"},
+        {"name": "SMTP_HOST", "value": "smtp.gmail.com"},
+        {"name": "SMTP_PORT", "value": "587"}
+      ],
+      "secrets": [
+        {"name": "ZOEY_CLIENT_ID", "valueFrom": "arn:aws:secretsmanager:us-east-1:207763041802:secret:ZOEY_CLIENT_ID-VC1oR3"},
+        {"name": "ZOEY_CLIENT_SECRET", "valueFrom": "arn:aws:secretsmanager:us-east-1:207763041802:secret:ZOEY_CLIENT_SECRET-QeLBGx"},
+        {"name": "ZOEY_TOKEN_URL", "valueFrom": "arn:aws:secretsmanager:us-east-1:207763041802:secret:ZOEY_TOKEN_URL-ikWPtj"},
+        {"name": "ZOEY_BASE_URL", "valueFrom": "arn:aws:secretsmanager:us-east-1:207763041802:secret:ZOEY_BASE_URL-tv1uRE"},
+        {"name": "SHOPIFY_STORE", "valueFrom": "arn:aws:secretsmanager:us-east-1:207763041802:secret:SHOPIFY_STORE-RwGKPL"},
+        {"name": "SHOPIFY_ACCESS_TOKEN", "valueFrom": "arn:aws:secretsmanager:us-east-1:207763041802:secret:SHOPIFY_ACCESS_TOKEN-VwyxQ8"},
+        {"name": "SHOPIFY_API_VERSION", "valueFrom": "arn:aws:secretsmanager:us-east-1:207763041802:secret:SHOPIFY_API_VERSION-y2qbVH"},
+        {"name": "SMTP_USER", "valueFrom": "arn:aws:secretsmanager:us-east-1:207763041802:secret:SMTP_USER-Wcz7QJ"},
+        {"name": "SMTP_PASSWORD", "valueFrom": "arn:aws:secretsmanager:us-east-1:207763041802:secret:SMTP_PASSWORD-tTdVaQ"},
+        {"name": "EMAIL_TO", "valueFrom": "arn:aws:secretsmanager:us-east-1:207763041802:secret:EMAIL_TO-U3A0A3"},
+        {"name": "S3_BUCKET", "valueFrom": "arn:aws:secretsmanager:us-east-1:207763041802:secret:S3_BUCKET-GJOYkC"}
+      ],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/outkast-task",
+          "awslogs-region": "us-east-1",
+          "awslogs-stream-prefix": "ecs"
+        }
+      }
+    }
+  ]
+}

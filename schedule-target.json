@@ -1,0 +1,15 @@
+{
+  "Arn": "arn:aws:ecs:us-east-1:207763041802:cluster/outkast-cluster",
+  "RoleArn": "arn:aws:iam::207763041802:role/outkast-scheduler-role",
+  "EcsParameters": {
+    "TaskDefinitionArn": "arn:aws:ecs:us-east-1:207763041802:task-definition/outkast-task:4",
+    "LaunchType": "FARGATE",
+    "NetworkConfiguration": {
+      "awsvpcConfiguration": {
+        "Subnets": ["subnet-058eaf967136cd61d"],
+        "SecurityGroups": ["sg-0a7cde413c0a66618"],
+        "AssignPublicIp": "ENABLED"
+      }
+    }
+  }
+}

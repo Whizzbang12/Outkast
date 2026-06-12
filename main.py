@@ -2,6 +2,7 @@ import os
 import datetime as dt
 import pandas as pd
 
+
 from config import REPORT_DIR
 from zoey_api import fetch_zoey
 from shopify_api import fetch_shopify
@@ -9,6 +10,7 @@ from analysis import build_sku_list, build_metrics, build_weekly_trend, build_da
 from report import build_report, send_reorder_email
 
 def main():
+    import boto3
     run_date = dt.date.today()
     os.makedirs(REPORT_DIR, exist_ok=True)
     print("=" * 60)
@@ -41,13 +43,21 @@ def main():
     trend    = build_weekly_trend(sku_list, z_sales, s_sales)
     daily    = build_daily_sales(sku_list, z_sales, s_sales)
 
-    out = os.path.join(REPORT_DIR,
-                       f"Inventory_Report_{run_date:%Y-%m-%d}.xlsx")
+    run_datetime = dt.datetime.now().strftime("%Y-%m-%d_%H-%M")
+    out = os.path.join(REPORT_DIR, f"Inventory_Report_{run_datetime}.xlsx")
     build_report(df, trend, daily, run_date, out)
     df.to_csv(out.replace(".xlsx", ".csv"), index=False)
 
+    s3_bucket = os.getenv("S3_BUCKET")
+    if s3_bucket:
+        s3 = boto3.client("s3")
+        s3.upload_file(out, s3_bucket, f"reports/{os.path.basename(out)}")
+        s3.upload_file(out.replace(".xlsx", ".csv"), s3_bucket, f"reports/{os.path.basename(out.replace('.xlsx', '.csv'))}")
+        print(f"Uploaded reports to S3 bucket: {s3_bucket}")
+
+
     # --- email reorder alert (priority SKUs only) ---
-    send_reorder_email(df, run_date)
+    send_reorder_email(df, run_date, out)
 
     print(f"Done.  "
           f"{int((~df.is_discontinued & df.reorder_flag & (df.daily_vel>0)).sum())} need reorder  |  "
